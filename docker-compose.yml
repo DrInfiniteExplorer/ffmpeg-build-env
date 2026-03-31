@@ -1,0 +1,18 @@
+services:
+  ffmpeg-build:
+    build: .
+    container_name: ffmpeg-cross
+    volumes:
+      - ./ffmpeg-cxc-build:/build # Mount build folder
+
+      - ./my-hints:/my-hints
+
+      - ./src:/src
+      - ./output:/output # Mount build output
+
+      - ./native:/native
+      - ./src-native:/src-native
+
+    working_dir: /ffmpeg
+    tty: true # keep container interactive
+    command: bash
