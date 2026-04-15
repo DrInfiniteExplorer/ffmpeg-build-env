@@ -1,8 +1,11 @@
 
 
 DOCKER = docker compose run --rm -e SSH_AUTH_SOCK=/ssh-agent $(if $1,$1,-T) ffmpeg-build
-DOCKER_GITHUB_KNOWN_HOSTS = mkdir -p /tmp && ssh-keyscan github.com > /tmp/known_hosts 2>/dev/null
 DOCKER_GIT_SSH_COMMAND = ssh -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/tmp/known_hosts
+DOCKER_GIT_SSH_SETUP = mkdir -p /tmp && ssh-keyscan github.com > /tmp/known_hosts 2>/dev/null
+
+# Run a command in the container with Git SSH host verification configured.
+DOCKER_WITH_GIT_SSH = $(call DOCKER,) bash -lc "$(DOCKER_GIT_SSH_SETUP); GIT_SSH_COMMAND='$(DOCKER_GIT_SSH_COMMAND)' $1"
 
 # Shell preamble: paths inside the ffmpeg-build docker container.
 define FFMPEG_CONFIGURED_TREE_SH_DOCKER=
@@ -31,10 +34,10 @@ shell:
 $(call RewriteHints,my-hints/mingw64,ffmpeg-cxc-build/ffmpeg-cxc-build-hints,/src)
 
 docker-ssh-preflight:
-	$(DOCKER) bash -lc "$(DOCKER_GITHUB_KNOWN_HOSTS); set -euo pipefail; echo SSH_AUTH_SOCK=\$$SSH_AUTH_SOCK; test -S \$$SSH_AUTH_SOCK || { echo ssh-agent socket is missing in container; exit 1; }; GIT_SSH_COMMAND='$(DOCKER_GIT_SSH_COMMAND)' ssh-add -l; GIT_SSH_COMMAND='$(DOCKER_GIT_SSH_COMMAND)' ssh -T git@github.com || true"
+	$(call DOCKER_WITH_GIT_SSH,set -euo pipefail; echo SSH_AUTH_SOCK=\$$SSH_AUTH_SOCK; test -S \$$SSH_AUTH_SOCK || { echo ssh-agent socket is missing in container; exit 1; }; ssh-add -l; ssh -T git@github.com || true)
 
 fetch: docker-ssh-preflight
-	$(DOCKER) bash -lc "$(DOCKER_GITHUB_KNOWN_HOSTS); GIT_SSH_COMMAND='$(DOCKER_GIT_SSH_COMMAND)' ROOT_PATH=/src SRC_PATH=src HINTS_FILE=/fetch-hints CXC_FETCH_ONLY=1 /build/ffmpeg-cxc-mingw64"
+	$(call DOCKER_WITH_GIT_SSH,ROOT_PATH=/src SRC_PATH=src HINTS_FILE=/fetch-hints CXC_FETCH_ONLY=1 /build/ffmpeg-cxc-mingw64)
 
 rebuild:
 	$(DOCKER) bash -lc "ROOT_PATH=/output SRC_PATH=src HINTS_FILE=/my-hints/mingw64 CXC_SHOW_ONLY=0 /build/ffmpeg-cxc-mingw64"
@@ -44,7 +47,7 @@ $(call RewriteHints,my-hints/native,ffmpeg-cxc-build/ffmpeg-native-build-hints,/
 
 fetch-native: docker-ssh-preflight
 	chmod +x ffmpeg-cxc-build/ffmpeg-native
-	$(DOCKER) bash -lc "$(DOCKER_GITHUB_KNOWN_HOSTS); GIT_SSH_COMMAND='$(DOCKER_GIT_SSH_COMMAND)' ROOT_PATH=/src-native SRC_PATH=src HINTS_FILE=/fetch-hints NCC_FETCH_ONLY=1 /build/ffmpeg-native"
+	$(call DOCKER_WITH_GIT_SSH,ROOT_PATH=/src-native SRC_PATH=src HINTS_FILE=/fetch-hints NCC_FETCH_ONLY=1 /build/ffmpeg-native)
 
 rebuild-native:	my-hints/native
 	$(DOCKER) bash -lc "ROOT_PATH=/native SRC_PATH=src HINTS_FILE=/my-hints/native NCC_SHOW_ONLY=0 /build/ffmpeg-native"
