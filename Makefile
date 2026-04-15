@@ -29,7 +29,7 @@ shell:
 $(call RewriteHints,my-hints/mingw64,ffmpeg-cxc-build/ffmpeg-cxc-build-hints,/src)
 
 fetch:
-	$(DOCKER) bash -lc "ROOT_PATH=/src SRC_PATH=src HINTS_FILE=/dev/null CXC_FETCH_ONLY=1 /build/ffmpeg-cxc-mingw64"
+	$(DOCKER) bash -lc "ROOT_PATH=/src SRC_PATH=src HINTS_FILE=/fetch-hints CXC_FETCH_ONLY=1 /build/ffmpeg-cxc-mingw64"
 
 rebuild:
 	$(DOCKER) bash -lc "ROOT_PATH=/output SRC_PATH=src HINTS_FILE=/my-hints/mingw64 CXC_SHOW_ONLY=0 /build/ffmpeg-cxc-mingw64"
@@ -39,7 +39,7 @@ $(call RewriteHints,my-hints/native,ffmpeg-cxc-build/ffmpeg-native-build-hints,/
 
 fetch-native:
 	chmod +x ffmpeg-cxc-build/ffmpeg-native
-	$(DOCKER) bash -lc "ROOT_PATH=/src-native SRC_PATH=src HINTS_FILE=/dev/null NCC_FETCH_ONLY=1 /build/ffmpeg-native"
+	$(DOCKER) bash -lc "ROOT_PATH=/src-native SRC_PATH=src HINTS_FILE=/fetch-hints NCC_FETCH_ONLY=1 /build/ffmpeg-native"
 
 rebuild-native:	my-hints/native
 	$(DOCKER) bash -lc "ROOT_PATH=/native SRC_PATH=src HINTS_FILE=/my-hints/native NCC_SHOW_ONLY=0 /build/ffmpeg-native"

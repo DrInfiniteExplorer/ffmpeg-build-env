@@ -6,6 +6,7 @@ services:
       - ./ffmpeg-cxc-build:/build # Mount build folder
 
       - ./my-hints:/my-hints
+      - ./fetch-hints:/fetch-hints
 
       - ./src:/src
       - ./output:/output # Mount build output
