@@ -2,8 +2,12 @@ services:
   ffmpeg-build:
     build: .
     container_name: ffmpeg-cross
+    environment:
+      - SSH_AUTH_SOCK=/ssh-agent
     volumes:
       - ./ffmpeg-cxc-build:/build # Mount build folder
+      - ${SSH_AUTH_SOCK:-/tmp/ssh-agent-missing}:/ssh-agent
+      - ${HOME}/.ssh/known_hosts:/root/.ssh/known_hosts:ro
 
       - ./my-hints:/my-hints
       - ./fetch-hints:/fetch-hints

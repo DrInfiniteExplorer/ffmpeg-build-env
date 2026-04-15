@@ -1,6 +1,8 @@
 
 
 DOCKER = docker compose run --rm $(if $1,$1,-T) ffmpeg-build
+DOCKER_GITHUB_KNOWN_HOSTS = mkdir -p /tmp && ssh-keyscan github.com > /tmp/known_hosts 2>/dev/null
+DOCKER_GIT_SSH_COMMAND = ssh -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/tmp/known_hosts
 
 # Shell preamble: paths inside the ffmpeg-build docker container.
 define FFMPEG_CONFIGURED_TREE_SH_DOCKER=
@@ -28,8 +30,11 @@ shell:
 
 $(call RewriteHints,my-hints/mingw64,ffmpeg-cxc-build/ffmpeg-cxc-build-hints,/src)
 
-fetch:
-	$(DOCKER) bash -lc "ROOT_PATH=/src SRC_PATH=src HINTS_FILE=/fetch-hints CXC_FETCH_ONLY=1 /build/ffmpeg-cxc-mingw64"
+docker-ssh-preflight:
+	$(DOCKER) bash -lc "$(DOCKER_GITHUB_KNOWN_HOSTS); GIT_SSH_COMMAND='$(DOCKER_GIT_SSH_COMMAND)' bash -lc 'set -euo pipefail; echo SSH_AUTH_SOCK=$$SSH_AUTH_SOCK; test -S $$SSH_AUTH_SOCK || { echo ssh-agent socket is missing in container; exit 1; }; ssh-add -l; ssh -T git@github.com || true'"
+
+fetch: docker-ssh-preflight
+	$(DOCKER) bash -lc "$(DOCKER_GITHUB_KNOWN_HOSTS); GIT_SSH_COMMAND='$(DOCKER_GIT_SSH_COMMAND)' ROOT_PATH=/src SRC_PATH=src HINTS_FILE=/fetch-hints CXC_FETCH_ONLY=1 /build/ffmpeg-cxc-mingw64"
 
 rebuild:
 	$(DOCKER) bash -lc "ROOT_PATH=/output SRC_PATH=src HINTS_FILE=/my-hints/mingw64 CXC_SHOW_ONLY=0 /build/ffmpeg-cxc-mingw64"
@@ -37,9 +42,9 @@ rebuild:
 
 $(call RewriteHints,my-hints/native,ffmpeg-cxc-build/ffmpeg-native-build-hints,/src-native/src)
 
-fetch-native:
+fetch-native: docker-ssh-preflight
 	chmod +x ffmpeg-cxc-build/ffmpeg-native
-	$(DOCKER) bash -lc "ROOT_PATH=/src-native SRC_PATH=src HINTS_FILE=/fetch-hints NCC_FETCH_ONLY=1 /build/ffmpeg-native"
+	$(DOCKER) bash -lc "$(DOCKER_GITHUB_KNOWN_HOSTS); GIT_SSH_COMMAND='$(DOCKER_GIT_SSH_COMMAND)' ROOT_PATH=/src-native SRC_PATH=src HINTS_FILE=/fetch-hints NCC_FETCH_ONLY=1 /build/ffmpeg-native"
 
 rebuild-native:	my-hints/native
 	$(DOCKER) bash -lc "ROOT_PATH=/native SRC_PATH=src HINTS_FILE=/my-hints/native NCC_SHOW_ONLY=0 /build/ffmpeg-native"
@@ -58,4 +63,4 @@ test-response-file:
 	$(DOCKER) bash -lc "$(call FFMPEG_CONFIGURED_TREE_SH_DOCKER,/native) make fate-response-file -j\$$(getconf _NPROCESSORS_ONLN)"
 
 
-.PHONY: yolo shell fetch rebuild ffmpeg test test-response-file
+.PHONY: yolo shell docker-ssh-preflight fetch fetch-native rebuild ffmpeg test test-response-file
