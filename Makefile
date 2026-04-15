@@ -50,7 +50,7 @@ ffmpeg:
 
 # Full FATE suite inside Docker. Optional: make test SAMPLES=/path/to/fate-suite
 test:
-	$(DOCKER) bash -lc "$(call FFMPEG_CONFIGURED_TREE_SH_DOCKER,/output) make fate -j\$$(getconf _NPROCESSORS_ONLN) $(if $(SAMPLES),SAMPLES=$(SAMPLES),)"
+	$(DOCKER) bash -lc "$(call FFMPEG_CONFIGURED_TREE_SH_DOCKER,/native) make fate -j1 $(if $(SAMPLES),SAMPLES=$(SAMPLES),)"
 
 # Requires ffprobe runnable on the host that runs fate-run.sh (native ELF on
 # Linux). A MinGW-only tree produces ffprobe.exe and these tests fail with 127.
