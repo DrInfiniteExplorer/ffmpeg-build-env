@@ -1,6 +1,6 @@
 
 
-DOCKER = docker compose run --rm $(if $1,$1,-T) ffmpeg-build
+DOCKER = docker compose run --rm -e SSH_AUTH_SOCK=/ssh-agent $(if $1,$1,-T) ffmpeg-build
 DOCKER_GITHUB_KNOWN_HOSTS = mkdir -p /tmp && ssh-keyscan github.com > /tmp/known_hosts 2>/dev/null
 DOCKER_GIT_SSH_COMMAND = ssh -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/tmp/known_hosts
 
@@ -31,7 +31,7 @@ shell:
 $(call RewriteHints,my-hints/mingw64,ffmpeg-cxc-build/ffmpeg-cxc-build-hints,/src)
 
 docker-ssh-preflight:
-	$(DOCKER) bash -lc "$(DOCKER_GITHUB_KNOWN_HOSTS); GIT_SSH_COMMAND='$(DOCKER_GIT_SSH_COMMAND)' bash -lc 'set -euo pipefail; echo SSH_AUTH_SOCK=$$SSH_AUTH_SOCK; test -S $$SSH_AUTH_SOCK || { echo ssh-agent socket is missing in container; exit 1; }; ssh-add -l; ssh -T git@github.com || true'"
+	$(DOCKER) bash -lc "$(DOCKER_GITHUB_KNOWN_HOSTS); set -euo pipefail; echo SSH_AUTH_SOCK=\$$SSH_AUTH_SOCK; test -S \$$SSH_AUTH_SOCK || { echo ssh-agent socket is missing in container; exit 1; }; GIT_SSH_COMMAND='$(DOCKER_GIT_SSH_COMMAND)' ssh-add -l; GIT_SSH_COMMAND='$(DOCKER_GIT_SSH_COMMAND)' ssh -T git@github.com || true"
 
 fetch: docker-ssh-preflight
 	$(DOCKER) bash -lc "$(DOCKER_GITHUB_KNOWN_HOSTS); GIT_SSH_COMMAND='$(DOCKER_GIT_SSH_COMMAND)' ROOT_PATH=/src SRC_PATH=src HINTS_FILE=/fetch-hints CXC_FETCH_ONLY=1 /build/ffmpeg-cxc-mingw64"
